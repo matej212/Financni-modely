@@ -1,0 +1,14 @@
+
+import yfinance as yf
+
+import pandas as pd
+
+ticker = "GOOGL"
+stock_data = yf.download(ticker, period="1y", interval="1d")
+
+# Vypočítání SMA a EMA
+stock_data['SMA_50'] = stock_data['Close'].rolling(window=50).mean()
+stock_data['EMA_50'] = stock_data['Close'].ewm(span=50, adjust=False).mean()
+
+# Zobrazení posledních hodnot
+print(stock_data[['Close', 'SMA_50', 'EMA_50']].tail())
