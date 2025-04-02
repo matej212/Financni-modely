@@ -1,34 +1,113 @@
+import yfinance as yf
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
-cena_akcie = 157.73  # USD
+# (od 2015 do současnosti)
+ticker = 'GOOGL'
+stock_data = yf.download(ticker, start='2015-01-01', end='2025-01-01')
 
-
-eps = 8.13  # USD
-dividenda = 0.51 / 100  
-wacc = 0.08  # např 8% pro tento výpočet
-g = 0.03  # (3% p.a.)
-roky = 5 
-
-# Růst EPS ročně
-rost_eps = 0.10  # Očekávaný růst 10% ročně
-
-
-eps_proj = [eps * (1 + rost_eps) ** i for i in range(1, roky + 1)]
+# Zobrazení prvních 5 řádků dat
+print(stock_data.head())
 
 
-fcf_proj = [eps * (1 + rost_eps) ** i * cena_akcie for i in range(1, roky + 1)]
+print(stock_data.describe())
 
+# Výpočet klouzavých průměrů (SMA)
 
-fcf_diskontovano = [fcf / (1 + wacc) ** i for i, fcf in enumerate(fcf_proj, 1)]
+stock_data['SMA_50'] = stock_data['Close'].rolling(window=50).mean()
 
+# 200-denní klouzavý průměr
+stock_data['SMA_200'] = stock_data['Close'].rolling(window=200).mean()
 
-terminovni_hodnota = eps_proj[-1] * (1 + g) / (wacc - g)
-terminovni_hodnota_diskontovana = terminovni_hodnota / (1 + wacc) ** roky
+# Vizualizace cen akcií a klouzavých průměrů
+plt.figure(figsize=(14, 7))
+plt.plot(stock_data['Close'], label='Close Price', color='blue')
+plt.plot(stock_data['SMA_50'], label='50-Day SMA', color='red', alpha=0.7)
+plt.plot(stock_data['SMA_200'], label='200-Day SMA', color='green', alpha=0.7)
+plt.title('GOOGL Stock Price and Moving Averages')
+plt.xlabel('Date')
+plt.ylabel('Price (USD)')
+plt.legend()
+plt.grid(True)
+plt.show()
 
+# Výpočet volatility
+# Roční volatilita 
+stock_data['Log_Returns'] = np.log(stock_data['Close'] / stock_data['Close'].shift(1))
+annual_volatility = stock_data['Log_Returns'].std() * np.sqrt(252)  # 252 obchodních dní v roce
+print(f"Annual Volatility: {annual_volatility:.2f}")
 
-celkova_soucasna_hodnota = sum(fcf_diskontovano) + terminovni_hodnota_diskontovana
+# Výpočet průměrného ročního výnosu
+annual_returns = stock_data['Log_Returns'].mean() * 252  # průměrný roční výnos
+print(f"Annualized Return: {annual_returns:.2f}")
 
+# 6. **Zobrazení histogramu logaritmických výnosů**
+plt.figure(figsize=(14, 7))
+stock_data['Log_Returns'].hist(bins=50, color='blue', alpha=0.7)
+plt.title('Histogram of Log Returns')
+plt.xlabel('Log Return')
+plt.ylabel('Frequency')
+plt.grid(True)
+plt.show()
 
-print(f"Očekávaný růst EPS: {rost_eps * 100:.2f}% ročně")
-print(f"Diskontní sazba (WACC): {wacc * 100:.2f}%")
-print(f"Termínovaná hodnota (po 5 letech): ${terminovni_hodnota:.2f}")
-print(f"Současná hodnota peněžních toků (DCF model): ${celkova_soucasna_hodnota:.2f}")
+# Technické indikátory
+# Výpočet RSI (Relative Strength Index)
+delta = stock_data['Close'].diff()
+gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+
+rs = gain / loss
+rsi = 100 - (100 / (1 + rs))
+stock_data['RSI'] = rsi
+
+# Vizualizace RSI
+plt.figure(figsize=(14, 7))
+plt.plot(stock_data['RSI'], label='RSI (14)', color='purple')
+plt.axhline(y=70, color='r', linestyle='--')
+plt.axhline(y=30, color='g', linestyle='--')
+plt.title('RSI (Relative Strength Index) for GOOGL')
+plt.xlabel('Date')
+plt.ylabel('RSI Value')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Zobrazení MACD (Moving Average Convergence Divergence)
+# MACD = 12-day EMA - 26-day EMA
+stock_data['EMA_12'] = stock_data['Close'].ewm(span=12, adjust=False).mean()
+stock_data['EMA_26'] = stock_data['Close'].ewm(span=26, adjust=False).mean()
+
+stock_data['MACD'] = stock_data['EMA_12'] - stock_data['EMA_26']
+stock_data['Signal_Line'] = stock_data['MACD'].ewm(span=9, adjust=False).mean()
+
+# Vizualizace MACD
+plt.figure(figsize=(14, 7))
+plt.plot(stock_data['MACD'], label='MACD', color='blue')
+plt.plot(stock_data['Signal_Line'], label='Signal Line', color='orange')
+plt.title('MACD and Signal Line for GOOGL')
+plt.xlabel('Date')
+plt.ylabel('MACD Value')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# orelace s ostatními akciemi nebo indexy např zde SP500
+# Stahování historických dat pro SP 500 (pro porovnání korelace)
+sp500 = yf.download('^GSPC', start='2015-01-01', end='2025-01-01')
+
+# Sloučení dat GOOGL a SP 500
+merged_data = pd.merge(stock_data['Close'], sp500['Close'], left_index=True, right_index=True, suffixes=('_GOOGL', '_SP500'))
+
+# Výpočet korelace
+correlation = merged_data.corr()
+print(correlation)
+
+# Zobrazení korelační matice
+plt.figure(figsize=(10, 6))
+plt.imshow(correlation, cmap='coolwarm', interpolation='none')
+plt.colorbar()
+plt.xticks([0, 1], ['GOOGL', 'S&P 500'])
+plt.yticks([0, 1], ['GOOGL', 'S&P 500'])
+plt.title('Correlation Matrix between GOOGL and S&P 500')
+plt.show()
