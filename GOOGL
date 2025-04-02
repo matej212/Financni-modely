@@ -1,0 +1,34 @@
+
+cena_akcie = 157.73  # USD
+
+
+eps = 8.13  # USD
+dividenda = 0.51 / 100  
+wacc = 0.08  # např 8% pro tento výpočet
+g = 0.03  # (3% p.a.)
+roky = 5 
+
+# Růst EPS ročně
+rost_eps = 0.10  # Očekávaný růst 10% ročně
+
+
+eps_proj = [eps * (1 + rost_eps) ** i for i in range(1, roky + 1)]
+
+
+fcf_proj = [eps * (1 + rost_eps) ** i * cena_akcie for i in range(1, roky + 1)]
+
+
+fcf_diskontovano = [fcf / (1 + wacc) ** i for i, fcf in enumerate(fcf_proj, 1)]
+
+
+terminovni_hodnota = eps_proj[-1] * (1 + g) / (wacc - g)
+terminovni_hodnota_diskontovana = terminovni_hodnota / (1 + wacc) ** roky
+
+
+celkova_soucasna_hodnota = sum(fcf_diskontovano) + terminovni_hodnota_diskontovana
+
+
+print(f"Očekávaný růst EPS: {rost_eps * 100:.2f}% ročně")
+print(f"Diskontní sazba (WACC): {wacc * 100:.2f}%")
+print(f"Termínovaná hodnota (po 5 letech): ${terminovni_hodnota:.2f}")
+print(f"Současná hodnota peněžních toků (DCF model): ${celkova_soucasna_hodnota:.2f}")
