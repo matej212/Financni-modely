@@ -1,6 +1,6 @@
 # Financial Analysis Project
 
-This repository contains Python code for performing fundamental financial analysis on publicly traded companies. It includes several modules to calculate key financial metrics such as P/E ratio, dividend yield, and Discounted Cash Flow (DCF) model.
+This repository contains Python codes and one Excel sheet for performing fundamental financial analysis on publicly traded companies. It includes several modules to calculate key financial metrics such as P/E ratio, dividend yield, and Discounted Cash Flow (DCF) model.
 
 ## Features
 
